@@ -1,8 +1,8 @@
 # UIC Search Engine
 
-<img src="https://github.com/ashwinkd/IRFinalProject/blob/master/Screenshots/main_page.png" alt="Main Page" width="300"/>
+<img src="https://github.com/ashwinkd/IRFinalProject/blob/master/Screenshots/main_page.png" alt="Main Page" width="400"/>
 
-<img src="https://github.com/ashwinkd/IRFinalProject/blob/master/Screenshots/result_page.png" alt="Result Page" width="400"/>
+<img src="https://github.com/ashwinkd/IRFinalProject/blob/master/Screenshots/result_page.png" alt="Result Page" width="500"/>
 
 
 ### Follow these steps to run on your system
