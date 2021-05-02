@@ -1,3 +1,4 @@
+import os
 import webbrowser
 
 import PySimpleGUI as sg
@@ -9,6 +10,11 @@ class SearchEngineGUI:
     sg.theme('DefaultNoMoreNagging')  # Add a touch of color
     engine = SearchEngine()
     query = ""
+
+    def __init__(self):
+        self.engine = SearchEngine(fresh_start=False) \
+            if SearchEngine.embeddings_file in os.listdir('.') \
+            else SearchEngine(fresh_start=True)
 
     def get_main_layout(self):
         main_layout = [[sg.Text('Search Engine', justification='center', size=(70, 1))],
@@ -73,8 +79,9 @@ class SearchEngineGUI:
                     sg.popup(f"Query Empty")
                     self.start_main()
 
-    def start_results(self, num_results=10):
-        results = self.get_results()
+    def start_results(self, results=None, num_results=10):
+        if results is None:
+            results = self.get_results()
         if not results:
             sg.popup("No Results Found")
             self.start_main()
@@ -96,7 +103,7 @@ class SearchEngineGUI:
             elif event == 'Go':
                 _num_results = int(values['combo'])
                 window.close()
-                self.start_results(num_results=_num_results)
+                self.start_results(results=results, num_results=_num_results)
 
     def get_results(self):
         print(self.query)
