@@ -5,11 +5,20 @@ import h5py
 from scipy.spatial.distance import cdist
 from sentence_transformers import SentenceTransformer
 
+from preprocessor import Preprocessor
+
 
 class SearchEngine:
     model = SentenceTransformer('bert-base-nli-mean-tokens')
     document_embeddings = None
-    embeddings_file = "document_embeddings.h5"
+    preprocessor = Preprocessor(stemmer_flag=True, stopwords_flag=True, min_word_length=2)
+    embeddings_file = "bert_embeddings.h5"
+
+    @staticmethod
+    def clean_text(text: str):
+        text = re.sub(r"[^a-zA-Z ]", " ", text)
+        text = re.sub(r"\s+", " ", text)
+        return text.strip()
 
     def __init__(self, fresh_start=False):
         self.documents = []
@@ -34,7 +43,7 @@ class SearchEngine:
         qresults = []
         if not query or not isinstance(query, str):
             return qresults
-        query = self.clean_text(query)
+        query = SearchEngine.clean_text(query.lower())
         queries = [query]
         query_embeddings = self.model.encode(queries)
         for query, query_embedding in zip(queries, query_embeddings):

@@ -1,4 +1,4 @@
 .idea
 __pycache__
-data.json
-document_embeddings.h5
+*.json
+*.h5

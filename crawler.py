@@ -13,13 +13,14 @@ logging.basicConfig(
 
 
 class Crawler:
+    link_graph = {}
+    visited_urls = []
+    url_to_content = {}
+    url_to_body = {}
+    filter_text = open('data_filter.txt', 'r').readlines()
 
-    def __init__(self, urls=[], max_pages=3500):
-
+    def __init__(self, urls=[], max_pages=4000):
         self.max_pages = max_pages
-        self.visited_urls = []
-        self.url_to_content = {}
-        self.url_to_body = {}
         self.urls_to_visit = urls
 
     def download_url(self, url):
@@ -37,6 +38,9 @@ class Crawler:
                 self.add_content(path, url, link.contents)
                 if path not in self.visited_urls and path not in self.urls_to_visit:
                     self.add_url_to_visit(path)
+                    self.add_link(url, path)
+            else:
+                self.visited_urls.append(path)
 
     def add_url_to_visit(self, url):
         self.urls_to_visit.append(url)
@@ -70,8 +74,8 @@ class Crawler:
 
         qs = urlencode(sorted(parse_qsl(split.query)))
         return urlunsplit((split.scheme, split.netloc, path, qs, ''))
-
-    def clean_text(self, text):
+    @staticmethod
+    def clean_text(text: str):
         text = re.sub(r"[^a-zA-Z ]", " ", text)
         text = re.sub(r"\s+", " ", text)
         return text.strip()
@@ -79,7 +83,7 @@ class Crawler:
     def add_body(self, url, html):
         url_text = set()
         soup = BeautifulSoup(html, 'html.parser')
-        regex = re.compile('(^|[^a-zA-Z])(title|description|text)([^a-zA-Z]|$)')
+        regex = re.compile('(^|[^a-zA-Z])(title|description|text|quote)([^a-zA-Z]|$)')
         htags = ["h1", "h2", "h3"]
         for tag in htags:
             for heading in soup.find_all(tag, {"class": regex}):
@@ -96,12 +100,27 @@ class Crawler:
                     title = title.getText()
                     title = self.clean_text(title.lower())
                     url_text.add(title)
-        for text in soup.find_all(['title', 'p']):
+                for para in EachPart.find_all('p'):
+                    para = para.getText()
+                    para = self.clean_text(para.lower())
+                    url_text.add(para)
+        for text in soup.find_all(['p']):
             text = text.getText()
             text = self.clean_text(text.lower())
             url_text.add(text)
-        url_text = " . ".join(url_text)
-        self.url_to_body[url] = url_text
+        page_body = []
+        for utext in url_text:
+            addtext = True
+            for ftext in self.filter_text:
+                ftext = self.clean_text(ftext)
+                if ftext in utext or utext in ftext:
+                    if len(utext.split()) < 20:
+                        addtext = False
+                if ftext == utext or re.match(r'skip\sto\s.*content', utext):
+                    addtext = False
+            if addtext:
+                page_body += [utext]
+        self.url_to_body[url] = " . ".join(page_body)
 
     def get_data(self):
         data = {}
@@ -133,6 +152,14 @@ class Crawler:
                 logging.exception(f'Failed to crawl: {url}')
         with open("data.json", "w") as outfile:
             json.dump(self.get_data(), outfile, indent=4)
+        self.link_graph = {key: list(value) for key, value in self.link_graph.items()}
+        with open("link_graph.json", "w") as outfile:
+            json.dump(self.link_graph, outfile, indent=4)
+
+    def add_link(self, parent, child):
+        if parent not in self.link_graph:
+            self.link_graph[parent] = set()
+        self.link_graph[parent].add(child)
 
 
 def main():
