@@ -7,8 +7,7 @@ from search_engine import SearchEngine
 
 
 class SearchEngineGUI:
-    sg.theme('DefaultNoMoreNagging')  # Add a touch of color
-    engine = SearchEngine()
+    sg.theme('DefaultNoMoreNagging')
     query = ""
 
     def __init__(self):

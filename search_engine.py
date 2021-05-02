@@ -21,7 +21,7 @@ class SearchEngine:
         data = json.load(open('data.json'))
         for url, text_dict in data.items():
             self.urls.append(url)
-            document = text_dict['body']
+            document = text_dict['atext']
             self.documents.append(document)
 
     def create_model(self, fresh_start):
@@ -41,7 +41,9 @@ class SearchEngine:
             distances = cdist([query_embedding], self.document_embeddings, "cosine")[0]
             results = zip(range(len(distances)), distances)
             results = sorted(results, key=lambda x: x[1])
-            for idx, distance in results[:100]:
+            if len(results) > 100:
+                results = results[:100]
+            for idx, distance in results:
                 print(self.documents[idx].strip(), "(Cosine Score: %.4f)" % (1 - distance))
                 qresults.append((self.documents[idx], self.urls[idx]))
         return qresults
