@@ -21,8 +21,8 @@ $ python main.py
     Starting with the seed: 'https://cs.uic.edu/' crawler parses indexes imformation and adds all href links in the page.<br>
     Output: *data.json* file
 * **search_engine.py**
-    Takes all crawled data in *data.json* outputs a BERT feature vector for each page. <br>
-    Given a query returns a list of top 100 pages based on cosine simlarity
+    Takes all crawled data in *data.json* outputs a BERT feature vector for each page. 
+    Given a query returns a list of top 100 pages based on cosine simlarity. <br>
     Output: *document_embeddings.h5* file
 * **main.py**
     This implements the GUI for the project. Contains two pages:
