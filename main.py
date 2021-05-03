@@ -1,4 +1,3 @@
-import os
 import webbrowser
 
 import PySimpleGUI as sg
@@ -11,9 +10,10 @@ class SearchEngineGUI:
     query = ""
 
     def __init__(self):
-        self.engine = SearchEngine(fresh_start=False) \
-            if SearchEngine.embeddings_file in os.listdir('.') \
-            else SearchEngine(fresh_start=True)
+        try:
+            self.engine = SearchEngine()
+        except Exception as e:
+            self.engine = SearchEngine(fresh_start=True)
 
     def get_main_layout(self):
         main_layout = [[sg.Text('Search Engine', justification='center', size=(70, 1))],

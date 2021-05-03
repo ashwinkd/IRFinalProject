@@ -1,5 +1,6 @@
 import json
 import logging
+import pickle
 import re
 from urllib.parse import urljoin, urlparse, urlsplit, urlunsplit, parse_qsl, urlencode, quote
 
@@ -11,15 +12,32 @@ logging.basicConfig(
     format='%(asctime)s %(levelname)s:%(message)s',
     level=logging.INFO)
 
+IGNORED_EXTENSIONS = [
+    # images
+    '.mng', '.pct', '.bmp', '.gif', '.jpg', '.jpeg', '.png', '.pst', '.psp', '.tif',
+    '.tiff', '.ai', '.drw', '.dxf', '.eps', '.ps', '.svg',
+
+    # audio
+    '.mp3', '.wma', '.ogg', '.wav', '.ra', '.aac', '.mid', '.au', '.aiff',
+
+    # video
+    '.3gp', '.asf', '.asx', '.avi', '.mov', '.mp4', '.mpg', '.qt', '.rm', '.swf', '.wmv',
+    '.m4a',
+
+    # other
+    '.css', '.pdf', '.doc', '.exe', '.bin', '.rss', '.zip', '.rar',
+]
+
 
 class Crawler:
-    link_graph = {}
+    link_graph = []
     visited_urls = []
     url_to_content = {}
     url_to_body = {}
     filter_text = open('data_filter.txt', 'r').readlines()
 
-    def __init__(self, urls=[], max_pages=4000):
+    def __init__(self, urls=[], max_pages=5000):
+        self.all_urls = urls.copy()
         self.max_pages = max_pages
         self.urls_to_visit = urls
 
@@ -37,13 +55,13 @@ class Crawler:
             if path and "uic.edu" in domain.lower():
                 self.add_content(path, url, link.contents)
                 if path not in self.visited_urls and path not in self.urls_to_visit:
-                    self.add_url_to_visit(path)
-                    self.add_link(url, path)
+                    if not self.a_file(path):
+                        if path not in self.all_urls:
+                            self.all_urls.append(path)
+                        self.urls_to_visit.append(path)
+                        self.add_link(url, path)
             else:
                 self.visited_urls.append(path)
-
-    def add_url_to_visit(self, url):
-        self.urls_to_visit.append(url)
 
     def crawl(self, url):
         html = self.download_url(url)
@@ -60,7 +78,10 @@ class Crawler:
                         self.url_to_content[url] = {}
                     if parent not in self.url_to_content[url]:
                         self.url_to_content[url][parent] = set()
-                    self.url_to_content[url][parent].add(c)
+                    for ftext in self.filter_text:
+                        ftext = self.clean_text(ftext)
+                        if ftext not in c:
+                            self.url_to_content[url][parent].add(c)
 
     def canonicalize(self, url):
         split = urlsplit(url_normalize(url))
@@ -74,6 +95,7 @@ class Crawler:
 
         qs = urlencode(sorted(parse_qsl(split.query)))
         return urlunsplit((split.scheme, split.netloc, path, qs, ''))
+
     @staticmethod
     def clean_text(text: str):
         text = re.sub(r"[^a-zA-Z ]", " ", text)
@@ -83,7 +105,7 @@ class Crawler:
     def add_body(self, url, html):
         url_text = set()
         soup = BeautifulSoup(html, 'html.parser')
-        regex = re.compile('(^|[^a-zA-Z])(title|description|text|quote)([^a-zA-Z]|$)')
+        regex = re.compile('(title|description|text|quote|course)')
         htags = ["h1", "h2", "h3"]
         for tag in htags:
             for heading in soup.find_all(tag, {"class": regex}):
@@ -92,18 +114,14 @@ class Crawler:
                 url_text.add(heading)
         for tag in ['div', 'section']:
             for EachPart in soup.find_all(tag, {"class": regex}):
-                for heading in EachPart.find_all(["h1", "h2", "h3"]):
-                    heading = heading.getText()
-                    heading = self.clean_text(heading.lower())
-                    url_text.add(heading)
-                for title in EachPart.find_all('title'):
-                    title = title.getText()
-                    title = self.clean_text(title.lower())
-                    url_text.add(title)
-                for para in EachPart.find_all('p'):
-                    para = para.getText()
-                    para = self.clean_text(para.lower())
-                    url_text.add(para)
+                for text in EachPart.find_all(["h1", "h2", "h3", 'title', 'p']):
+                    text = text.getText()
+                    text = self.clean_text(text.lower())
+                    url_text.add(text)
+                text = EachPart.getText()
+                text = self.clean_text(text.lower())
+                url_text.add(text)
+
         for text in soup.find_all(['p']):
             text = text.getText()
             text = self.clean_text(text.lower())
@@ -152,14 +170,22 @@ class Crawler:
                 logging.exception(f'Failed to crawl: {url}')
         with open("data.json", "w") as outfile:
             json.dump(self.get_data(), outfile, indent=4)
-        self.link_graph = {key: list(value) for key, value in self.link_graph.items()}
-        with open("link_graph.json", "w") as outfile:
-            json.dump(self.link_graph, outfile, indent=4)
+            outfile.close()
+        with open("link_graph.pickle", "wb") as gfile:
+            pickle.dump(self.link_graph, gfile)
+            gfile.close()
+        with open("all_links.pickle", "w") as linkfile:
+            pickle.dump(self.all_urls, linkfile)
+            linkfile.close()
 
     def add_link(self, parent, child):
-        if parent not in self.link_graph:
-            self.link_graph[parent] = set()
-        self.link_graph[parent].add(child)
+        parent_key = self.all_urls.index(parent)
+        child_key = self.all_urls.index(child)
+        if (parent_key, child_key) not in self.link_graph:
+            self.link_graph.append((parent_key, child_key))
+
+    def a_file(self, url):
+        return url[-4:] in IGNORED_EXTENSIONS
 
 
 def main():
