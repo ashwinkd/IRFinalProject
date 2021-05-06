@@ -18,28 +18,27 @@ nltk.download('punkt')
 class SearchEngine:
     model = SentenceTransformer('bert-base-nli-mean-tokens')
     vectorizer = TfidfVectorizer()
-    document_embeddings_field1 = None
+    document_lengths = {}
+    documents = []
+    document_titles = {}
+    urls = []
+    tf = {}
+    idf = {}
+    url_to_doc = {}
+    document_embeddings = None
     document_embeddings_field2 = None
+    embeddings_file = f"data/bert_embeddings.h5"
     preprocessor = Preprocessor(stemmer_flag=True, stopwords_flag=True, min_word_length=2)
 
-    pagerank = TSPageRank()
+    pagerank = TSPageRank(num_iterations=4)
 
     def clean_text(self, text: str):
-        text = re.sub(r"[^a-zA-Z ]", " ", text)
+        text = re.sub(r"[^a-zA-Z0-9 ]", " ", text)
         text = re.sub(r"\s+", " ", text)
         return text.strip()
 
     def __init__(self, method, fresh_start=False):
-        self.document_lengths = {}
-        self.method = method
-        self.embeddings_file1 = f"data/bert_embeddings_f1.h5"
-        self.embeddings_file2 = f"data/bert_embeddings_f2.h5"
-        self.documents_field1 = []
-        self.documents_field2 = []
-        self.document_titles = {}
-        self.urls = []
-        self.tf = {}
-        self.idf = {}
+
         self.import_data(fresh_start)
         self.create_model(fresh_start)
 
@@ -48,14 +47,14 @@ class SearchEngine:
         for url, text_dict in data.items():
             self.urls.append(url)
             document1 = text_dict['atext']
-            self.documents_field1.append(self.clean_text(document1))
             document2 = text_dict['body']
-            self.documents_field2.append(self.clean_text(document2))
-            if 'title' in text_dict:
-                title = text_dict['title']
-                self.document_titles[url] = title
+            doc = "{} {}".format(document1, document2)
+            doc = self.clean_text(doc)
+            self.documents.append(document1)
+            self.url_to_doc[url] = document1
+            self.document_titles[url] = text_dict['title']
             if fresh_start:
-                self.add_to_index("{} {}".format(document1, document2), url)
+                self.add_to_index(doc, url)
         if fresh_start:
             self.add_idf(N=len(data))
             with open('data/tfidf_data.pickle', 'wb') as fptr:
@@ -65,8 +64,6 @@ class SearchEngine:
                 self.tf, self.idf, self.document_lengths = pickle.load(fptr)
 
     def create_model(self, fresh_start):
-        if self.method == "TFIDF":
-            return
         if fresh_start:
             self.create_embeddings()
         else:
@@ -74,32 +71,37 @@ class SearchEngine:
 
     def search(self, query):
         qresults = []
-        results = []
-        if not query or not isinstance(query, str):
-            return qresults
-        if self.method == "BERT":
-            query = self.clean_text(query.lower())
-            queries = [query]
-            query_embeddings = self.model.encode(queries)
-            for query, query_embedding in zip(queries, query_embeddings):
-                distances1 = cdist([query_embedding], self.document_embeddings_field1, "cosine")[0]
-                distances2 = cdist([query_embedding], self.document_embeddings_field2, "cosine")[0]
-
-                results1 = list(zip(range(len(distances1)), distances1))
-                results2 = list(zip(range(len(distances2)), distances2))
-
-                results = self.get_average_rank(results1, results2, weights=[0.8, 0.2])
-        elif self.method == "TFIDF":
-            qwords = word_tokenize(query.lower())
-            results = self.get_cosine(qwords)
-
-        if len(results) > 100:
-            results = results[:100]
-
+        query = self.clean_text(query)
+        qwords = word_tokenize(query.lower())
+        results = self.get_cosine(qwords)
+        query = self.clean_text(query.lower())
+        qembedding = self.model.encode(query)
+        qdistances = cdist([qembedding], self.document_embeddings, "cosine")[0]
+        bertresults = list(zip(self.urls, qdistances))
+        bertresults = sorted(bertresults, key=lambda x: x[1])
+        semantically_similar_docs = []
+        if len(results) > 10:
+            results = results[:10]
+        results += bertresults
+        temp = []
+        for i in range(10):
+            temp.append(results[i])
+            bertresults.append(results[i])
+        results = temp
+        for url, score in results:
+            doc = self.url_to_doc[url]
+            doc = self.clean_text(doc.lower())
+            doc_embeddings = self.model.encode(doc)
+            distances = cdist([doc_embeddings], self.document_embeddings, "cosine")[0]
+            doc_results = list(zip(self.urls, distances))
+            doc_results = sorted(doc_results, key=lambda x: x[1], reverse=True)
+            for item in doc_results[:5]:
+                if item not in semantically_similar_docs:
+                    semantically_similar_docs.append(item)
+        results += self.get_pagerank(semantically_similar_docs)
         for url, score in results:
             title = self.document_titles[url]
             qresults.append((title, url))
-
         return qresults
 
     def get_cosine(self, query_tokens):
@@ -135,36 +137,15 @@ class SearchEngine:
         return text
 
     def read_embeddings(self):
-        h5f1 = h5py.File(self.embeddings_file1, 'r')
-        self.document_embeddings_field1 = h5f1['dataset_1'][:]
+        h5f1 = h5py.File(self.embeddings_file, 'r')
+        self.document_embeddings = h5f1['dataset_1'][:]
         h5f1.close()
-        h5f2 = h5py.File(self.embeddings_file2, 'r')
-        self.document_embeddings_field2 = h5f2['dataset_1'][:]
-        h5f2.close()
 
     def create_embeddings(self):
-        self.document_embeddings_field1 = self.model.encode(self.documents_field1)
-        h5f1 = h5py.File(self.embeddings_file1, 'w')
-        h5f1.create_dataset('dataset_1', data=self.document_embeddings_field1)
+        self.document_embeddings = self.model.encode(self.documents)
+        h5f1 = h5py.File(self.embeddings_file, 'w')
+        h5f1.create_dataset('dataset_1', data=self.document_embeddings)
         h5f1.close()
-
-        self.document_embeddings_field2 = self.model.encode(self.documents_field2)
-        h5f2 = h5py.File(self.embeddings_file2, 'w')
-        h5f2.create_dataset('dataset_1', data=self.document_embeddings_field2)
-        h5f2.close()
-
-    def get_average_rank(self, results1, results2, weights):
-        results = []
-        for ri in range(len(results1)):
-            score1 = results1[ri][1]
-            score2 = results2[ri][1]
-            results.append((ri, weights[0] * score1 + weights[1] * score2))
-        results = sorted(results, key=lambda x: x[1], reverse=True)
-        s = sum(x[1] for x in results)
-        results = {self.urls[x[0]]: x[1] / s for x in results}
-        pgscores = self.pagerank.get_pageranks(results)
-        pgscores = [(url, score) for url, score in pgscores]
-        return pgscores
 
     def add_to_index(self, text, url):
         words = word_tokenize(text)
@@ -186,11 +167,18 @@ class SearchEngine:
                     self.document_lengths[url] = 0
                 self.document_lengths[url] += tfidf ** 2
 
+    def get_pagerank(self, results):
+        results = sorted(results, key=lambda x: x[1], reverse=True)
+        s = sum(x[1] for x in results)
+        results = {x[0]: x[1] / s for x in results}
+        pgscores = self.pagerank.get_pageranks(results)
+        return pgscores
+
 
 def main():
     se = SearchEngine(fresh_start=False, method='TFIDF')
-    results = se.search("Undergraduate courses")
-    print(results)
+    results = se.search("Cornelia Caragea")
+    print([print(r) for r in results])
 
 
 if __name__ == '__main__':

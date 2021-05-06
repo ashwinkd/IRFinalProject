@@ -22,10 +22,10 @@ class SearchEngineGUI:
                        [sg.Text(" ", justification='left', size=(20, 1))],
                        [sg.Text('Enter Query:'),
                         sg.Input(justification='left', size=(50, 1)),
-                        sg.Button('Go', size=(10, 1))],
+                        sg.Button('Go', size=(10, 1), bind_return_key=True)],
                        [sg.Text(" ", justification='left', size=(20, 1))],
                        [sg.Text(" ", justification='left', size=(20, 1)),
-                        sg.Button('Exit', size=(20, 1), bind_return_key=True)]
+                        sg.Button('Exit', size=(20, 1))]
                        ]
         return main_layout
 

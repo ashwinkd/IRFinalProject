@@ -203,7 +203,7 @@ class Crawler:
         parent_key = self.all_urls.index(parent)
         child_key = self.all_urls.index(child)
         if (parent_key, child_key) not in self.link_graph:
-            self.link_graph.append((parent_key, child_key))
+            self.link_graph.append((parent, child))
 
     def a_file(self, url):
         return url[-4:] in IGNORED_EXTENSIONS
