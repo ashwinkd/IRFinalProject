@@ -3,3 +3,6 @@ __pycache__
 *.json
 *.h5
 *.pickle
+data/link_graph2.pickle
+data/bert_embeddings_f1_BERT.h5
+data/bert_embeddings_f2_BERT.h5

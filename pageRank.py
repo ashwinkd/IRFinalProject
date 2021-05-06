@@ -7,8 +7,9 @@ class TSPageRank:
     """
     This is an implementation of topic specific page rank
     """
-    all_urls = pickle.load(open('all_links.pickle', 'r'))
-    graph = pickle.load(open('graph.pickle', 'r'))
+    all_urls = list(pickle.load(open('data/url_keys.pickle', 'rb')).keys())
+    all_keys = list(pickle.load(open('data/url_keys.pickle', 'rb')).values())
+    graph = pickle.load(open('data/link_graph.pickle', 'rb'))
     # v = np.array([1 / len(all_urls) for node in all_urls])
     v = np.full(len(all_urls), 1 / len(all_urls))
     M = np.zeros(shape=[len(all_urls), len(all_urls)])
@@ -20,6 +21,8 @@ class TSPageRank:
 
     def create_matrix(self):
         for p, c in self.graph:
+            c = self.all_keys.index(c)
+            p = self.all_keys.index(p)
             self.M.itemset((c, p), 1)
         for node in range(len(self.all_urls)):
             col = self.M[:, node]
@@ -33,11 +36,14 @@ class TSPageRank:
         v = self.v.copy()
         p_hat = self.alpha * np.array([urls_to_cores[u] if u in urls_to_cores else 0 for u in self.all_urls])
         for _ in range(self.num_iterations):
-            print(v)
+            # print(v)
             v2 = self.M.dot(v)
             v2 = (1 - self.alpha) * v2
             v = v2 + p_hat
         for u in urls_to_cores:
-            idx = self.all_urls.index(u)
-            pgscores.append((u, v[idx]))
+            if u in self.all_urls:
+                idx = self.all_urls.index(u)
+                pgscores.append((u, v[idx]))
+            else:
+                print(u)
         return sorted(pgscores, key=lambda x: x[1])

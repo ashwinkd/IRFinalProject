@@ -2,11 +2,14 @@ import json
 import logging
 import pickle
 import re
-from urllib.parse import urljoin, urlparse, urlsplit, urlunsplit, parse_qsl, urlencode, quote
+from urllib.parse import urljoin, urlparse
+
+MAX_FILE_SIZE = 1024 * 1024
+import hashlib
+from urllib.request import urlopen
 
 import requests
 from bs4 import BeautifulSoup
-from url_normalize import url_normalize
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)s:%(message)s',
@@ -31,10 +34,11 @@ IGNORED_EXTENSIONS = [
 
 class Crawler:
     link_graph = []
-    visited_urls = []
+    visited_urls = set()
     url_to_content = {}
     url_to_body = {}
     filter_text = open('data_filter.txt', 'r').readlines()
+    all_md5 = []
 
     def __init__(self, urls=[], max_pages=5000):
         self.all_urls = urls.copy()
@@ -50,23 +54,20 @@ class Crawler:
             path = link.get('href')
             if path and path.startswith('/'):
                 path = urljoin(url, path)
-            path = self.canonicalize(path)
             domain = urlparse(path).netloc
-            if path and "uic.edu" in domain.lower():
-                self.add_content(path, url, link.contents)
-                if path not in self.visited_urls and path not in self.urls_to_visit:
-                    if not self.a_file(path):
-                        if path not in self.all_urls:
-                            self.all_urls.append(path)
-                        self.urls_to_visit.append(path)
-                        self.add_link(url, path)
-            else:
-                self.visited_urls.append(path)
+            if not self.is_unique(path) or self.a_file(path) or "uic.edu" not in domain \
+                    or path in self.visited_urls \
+                    or path in self.urls_to_visit:
+                self.visited_urls.add(path)
+                continue
+            self.add_content(path, url, link.contents)
+            self.urls_to_visit.append(path)
+            self.add_link(url, path)
 
     def crawl(self, url):
         html = self.download_url(url)
-        self.visited_urls.append(url)
-        self.add_body(url, html)
+        self.visited_urls.add(url)
+        # self.add_body(url, html)
         self.get_linked_urls(url, html)
 
     def add_content(self, url, parent, content):
@@ -83,18 +84,26 @@ class Crawler:
                         if ftext not in c:
                             self.url_to_content[url][parent].add(c)
 
-    def canonicalize(self, url):
-        split = urlsplit(url_normalize(url))
-        path = quote(split[2])
+    def txt_md5(self, txt):
+        txt = txt.encode('utf-8')
+        return hashlib.md5(txt).hexdigest()
 
-        while path.startswith('/..'):
-            path = path[3:]
-
-        while path.endswith('%20'):
-            path = path[:-3]
-
-        qs = urlencode(sorted(parse_qsl(split.query)))
-        return urlunsplit((split.scheme, split.netloc, path, qs, ''))
+    def is_unique(self, url):
+        try:
+            c = urlopen(url)
+            r = c.read(MAX_FILE_SIZE)
+            soup = BeautifulSoup(r, features="lxml")
+            header = soup.find('head').text
+            body = soup.find('body').text
+            md5 = [self.txt_md5(h) for h in [header, body]]
+            if md5 not in self.all_md5:
+                self.all_md5.append(md5)
+                self.all_urls.append(url)
+                return True
+            else:
+                return False
+        except:
+            return False
 
     @staticmethod
     def clean_text(text: str):
@@ -154,6 +163,18 @@ class Crawler:
             body = self.url_to_body[key]
             data[key] = {"atext": atext,
                          "body": body}
+        for key in self.url_to_content:
+            if key in self.url_to_body:
+                continue
+            adict = self.url_to_content[key]
+            asets = adict.values()
+            aset = set()
+            for elem in asets:
+                aset.update(elem)
+            atext = " . ".join(list(aset))
+            data[key] = {"atext": atext,
+                         "body": ""}
+
         return data
 
     def run(self):
@@ -168,13 +189,13 @@ class Crawler:
                 urlnum += 1
             except Exception:
                 logging.exception(f'Failed to crawl: {url}')
-        with open("data.json", "w") as outfile:
+        with open("data/data.json", "w") as outfile:
             json.dump(self.get_data(), outfile, indent=4)
             outfile.close()
-        with open("link_graph.pickle", "wb") as gfile:
+        with open("data/link_graph2.pickle", "wb") as gfile:
             pickle.dump(self.link_graph, gfile)
             gfile.close()
-        with open("all_links.pickle", "w") as linkfile:
+        with open("all_links.pickle", "wb") as linkfile:
             pickle.dump(self.all_urls, linkfile)
             linkfile.close()
 
@@ -189,7 +210,7 @@ class Crawler:
 
 
 def main():
-    Crawler(urls=['https://cs.uic.edu/']).run()
+    Crawler(urls=['https://cs.uic.edu/'], max_pages=100).run()
 
 
 if __name__ == '__main__':

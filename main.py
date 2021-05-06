@@ -8,12 +8,14 @@ from search_engine import SearchEngine
 class SearchEngineGUI:
     sg.theme('DefaultNoMoreNagging')
     query = ""
+    methods = ['BERT', "TFIDF"]
 
-    def __init__(self):
+    def __init__(self, method="TFIDF"):
+        self.method = method
         try:
-            self.engine = SearchEngine()
+            self.engine = SearchEngine(method=method)
         except Exception as e:
-            self.engine = SearchEngine(fresh_start=True)
+            self.engine = SearchEngine(fresh_start=True, method=method)
 
     def get_main_layout(self):
         main_layout = [[sg.Text('Search Engine', justification='center', size=(70, 1))],
@@ -23,7 +25,7 @@ class SearchEngineGUI:
                         sg.Button('Go', size=(10, 1))],
                        [sg.Text(" ", justification='left', size=(20, 1))],
                        [sg.Text(" ", justification='left', size=(20, 1)),
-                        sg.Button('Exit', size=(20, 1))]
+                        sg.Button('Exit', size=(20, 1), bind_return_key=True)]
                        ]
         return main_layout
 
