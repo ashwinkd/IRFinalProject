@@ -36,6 +36,8 @@ $ python main.py
     This is a small script that runs a Spearman Ranked Correlation Coefficient and Recall Evaluation of 5 queries.
 * **Search-Engine/WebCrawl/spiders/uic_spyder.py**
     This is the Scrapy crawler which fetches page data and web-graph for PageRank Algorithm.  <br>
+* **pageRank.py**
+    This implements the PageRank algorithm specified in the Report.
 
 ### Data Folder:
 
