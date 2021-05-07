@@ -1,5 +1,9 @@
 # UIC Search Engine
 
+### Read Report for detailed explanation:
+
+[Report](https://github.com/ashwinkd/Search-Engine/blob/master/Search_Engine_for_UIC_Domain_Report.pdf)
+
 ### Screenshots:
 
 <img src="https://github.com/ashwinkd/IRFinalProject/blob/master/Screenshots/main_page.png" alt="Main Page" width="400"/>  <img src="https://github.com/ashwinkd/IRFinalProject/blob/master/Screenshots/result_page.png" alt="Result Page" width="500"/>
