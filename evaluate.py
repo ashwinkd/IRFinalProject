@@ -10,4 +10,6 @@ for query, target in results.items():
     pred = se.search(query)
     pred = [x[1] for x in pred[:10]]
     rho = spearmanr(pred, target)
-    print(rho.correlation, rho.pvalue)
+    recall = len(set(pred).intersection(target))/len(target)
+    print(query, "&", rho.correlation, "&", rho.pvalue, "&", recall, "\\\\")
+    print('\\hline')
