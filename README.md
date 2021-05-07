@@ -10,15 +10,15 @@
 $ git clone https://github.com/ashwinkd/IRFinalProject.git
 $ cd IRFinalProject
 $ pip install -r requirements.txt
-$ python crawler.py
+$ cd WebCrawl/spiders; scrapy crawl uic (optional)
 $ python main.py
 ```
 
 
-### Function of Each File
+### Function of Each File:
 
 * **crawler.py** 
-    Starting with the seed: 'https://cs.uic.edu/' crawler parses indexes imformation and adds all href links in the page.<br>
+    Starting with the seed: 'https://cs.uic.edu/' crawler parses indexes imformation and adds all href links in the page. This used BeautifulSoup library.<br>
     Output: *data.json* file
 * **search_engine.py**
     Takes all crawled data in *data.json* outputs a BERT feature vector for each page. 
@@ -28,4 +28,17 @@ $ python main.py
     This implements the GUI for the project. Contains two pages:
     * Main Page: Here you can enter your query
     * Result Page: Here you can see the results. By default shows top 10 results.
+* **evaluate.py**
+    This is a small script that runs a Spearman Ranked Correlation Coefficient and Recall Evaluation of 5 queries.
+* **Search-Engine/WebCrawl/spiders/uic_spyder.py**
+    This is the Scrapy crawler which fetches page data and web-graph for PageRank Algorithm.  <br>
+
+### Data Folder:
+
+* **data.pickle**: Contains Title, URL, Boddy and atag Text.
+* **results.json**: Containsgold-standard results for evaluation.
+* **link_graph.pickle**: Consist of a list of parent to child href links
+* **tfidf_data.pickle**: Consists of term freq, inverse document frequence and document length
+* **bert_embeddings.h5**: Contains the documents embeddings of shape (7640 x 768).
+    
     
