@@ -6,9 +6,11 @@
 
 ### Screenshots:
 Main Page:
+
 <img align="center" width="400" src="https://github.com/ashwinkd/IRFinalProject/blob/master/Screenshots/main_page.png">
 
 Results Page:
+
 <img align="center" width="500" src="https://github.com/ashwinkd/IRFinalProject/blob/master/Screenshots/result_page.png">
 
 
