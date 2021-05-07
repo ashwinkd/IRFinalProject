@@ -24,7 +24,7 @@ $ python main.py
 ```
 
 
-### Function of Each File:
+### Code:
 
 * **crawler.py** 
     Starting with the seed: 'https://cs.uic.edu/' crawler parses indexes imformation and adds all href links in the page. This used BeautifulSoup library.<br>
