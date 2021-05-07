@@ -6,13 +6,13 @@
 
 ### Screenshots:
 Main Page:
-
-<img align="centre" width="400" src="https://github.com/ashwinkd/IRFinalProject/blob/master/Screenshots/main_page.png">
-
+<p align="center">
+<img width="400" src="https://github.com/ashwinkd/IRFinalProject/blob/master/Screenshots/main_page.png">
+</p>
 Results Page:
-
-<img align="centre" width="500" src="https://github.com/ashwinkd/IRFinalProject/blob/master/Screenshots/result_page.png">
-
+<p align="center">
+<img width="500" src="https://github.com/ashwinkd/IRFinalProject/blob/master/Screenshots/result_page.png">
+</p>
 
 ### Follow these steps to run on your system
 ```
