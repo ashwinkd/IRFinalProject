@@ -9,13 +9,15 @@ class SearchEngineGUI:
     sg.theme('DefaultNoMoreNagging')
     query = ""
     methods = ['BERT', "TFIDF"]
+    last_metric = 'cosine'
+    selection_num_res = [10, 50, 100]
+    selection_metric = ['euclidean', 'cosine', 'cityblock']
 
-    def __init__(self, method="TFIDF"):
-        self.method = method
+    def __init__(self):
         try:
-            self.engine = SearchEngine(method=method)
+            self.engine = SearchEngine()
         except Exception as e:
-            self.engine = SearchEngine(fresh_start=True, method=method)
+            self.engine = SearchEngine(fresh_start=True)
 
     def get_main_layout(self):
         main_layout = [[sg.Text('Search Engine', justification='center', size=(70, 1))],
@@ -30,7 +32,7 @@ class SearchEngineGUI:
         return main_layout
 
     def get_results_layout(self, results, num_results):
-        selection = [10, 50, 100]
+
         i = 0
         results_layout = [[sg.Text("Results",
                                    justification='center',
@@ -39,7 +41,10 @@ class SearchEngineGUI:
                                    background_color='#0645AD',
                                    enable_events=True,
                                    pad=(0, 10)),
-                           sg.Combo(selection, enable_events=True, key='combo', background_color='#0645AD'),
+                           sg.Combo(self.selection_num_res, enable_events=True, key='combo',
+                                    background_color='#0645AD'),
+                           sg.Combo(self.selection_metric, enable_events=True, key='metric',
+                                    background_color='#0645AD'),
                            sg.Button('Go')]]
         result_items = []
         for title, link in results:
@@ -80,7 +85,10 @@ class SearchEngineGUI:
                     sg.popup(f"Query Empty")
                     self.start_main()
 
-    def start_results(self, results=None, num_results=10):
+    def start_results(self, results=None, num_results=10, metric='cosine'):
+        if metric != self.last_metric:
+            self.last_metric = metric
+            results = self.get_results()
         if results is None:
             results = self.get_results()
         if not results:
@@ -102,13 +110,19 @@ class SearchEngineGUI:
             elif event in links:
                 self.launch_browser(event)
             elif event == 'Go':
-                _num_results = int(values['combo'])
+                try:
+                    _num_results = int(values['combo'])
+                except:
+                    _num_results = 10
+                _metric = str(values['metric'])
+                if values['metric'] not in self.selection_metric:
+                    _metric = 'cosine'
                 window.close()
-                self.start_results(results=results, num_results=_num_results)
+                self.start_results(results=results, num_results=_num_results, metric=_metric)
 
     def get_results(self):
         print(self.query)
-        return self.engine.search(self.query)
+        return self.engine.search(self.query, self.last_metric)
 
     def launch_browser(self, url):
         webbrowser.open(url, new=2)

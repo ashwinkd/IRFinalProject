@@ -37,8 +37,7 @@ class SearchEngine:
         text = re.sub(r"\s+", " ", text)
         return text.strip()
 
-    def __init__(self, method, fresh_start=False):
-
+    def __init__(self, fresh_start=False):
         self.import_data(fresh_start)
         self.create_model(fresh_start)
 
@@ -69,14 +68,14 @@ class SearchEngine:
         else:
             self.read_embeddings()
 
-    def search(self, query):
+    def search(self, query, metric='cosine'):
         qresults = []
         query = self.clean_text(query)
         qwords = word_tokenize(query.lower())
         results = self.get_cosine(qwords)
         query = self.clean_text(query.lower())
         qembedding = self.model.encode(query)
-        qdistances = cdist([qembedding], self.document_embeddings, "cosine")[0]
+        qdistances = cdist([qembedding], self.document_embeddings, metric)[0]
         bertresults = list(zip(self.urls, qdistances))
         bertresults = sorted(bertresults, key=lambda x: x[1])
         semantically_similar_docs = []
@@ -84,9 +83,16 @@ class SearchEngine:
             results = results[:10]
         results += bertresults
         temp = []
-        for i in range(10):
-            temp.append(results[i])
-            bertresults.append(results[i])
+        urls = []
+        for i in range(100):
+            if len(temp) > 20:
+                break
+            if results[i][0] not in urls:
+                urls.append(results[i][0])
+                temp.append(results[i])
+            if bertresults[i][0] not in urls:
+                urls.append(bertresults[i][0])
+                temp.append(bertresults[i])
         results = temp
         for url, score in results:
             doc = self.url_to_doc[url]
@@ -94,7 +100,7 @@ class SearchEngine:
             doc_embeddings = self.model.encode(doc)
             distances = cdist([doc_embeddings], self.document_embeddings, "cosine")[0]
             doc_results = list(zip(self.urls, distances))
-            doc_results = sorted(doc_results, key=lambda x: x[1], reverse=True)
+            doc_results = sorted(doc_results, key=lambda x: x[1])
             for item in doc_results[:5]:
                 if item not in semantically_similar_docs:
                     semantically_similar_docs.append(item)
@@ -168,9 +174,10 @@ class SearchEngine:
                 self.document_lengths[url] += tfidf ** 2
 
     def get_pagerank(self, results):
-        results = sorted(results, key=lambda x: x[1], reverse=True)
-        s = sum(x[1] for x in results)
-        results = {x[0]: x[1] / s for x in results}
+        results = sorted(results, key=lambda x: x[1])
+        s = sum([x[1] for x in results])
+        base = max([x[1] for x in results])
+        results = {x[0]: (x[1] + base) / s for x in results}
         pgscores = self.pagerank.get_pageranks(results)
         return pgscores
 
