@@ -5,8 +5,11 @@
 [Report](https://github.com/ashwinkd/Search-Engine/blob/master/Search_Engine_for_UIC_Domain_Report.pdf)
 
 ### Screenshots:
+Main Page:
+<img align="center" width="400" src="https://github.com/ashwinkd/IRFinalProject/blob/master/Screenshots/main_page.png">
 
-<img src="https://github.com/ashwinkd/IRFinalProject/blob/master/Screenshots/main_page.png" alt="Main Page" width="400"/>  <img src="https://github.com/ashwinkd/IRFinalProject/blob/master/Screenshots/result_page.png" alt="Result Page" width="500"/>
+Results Page:
+<img align="center" width="500" src="https://github.com/ashwinkd/IRFinalProject/blob/master/Screenshots/result_page.png">
 
 
 ### Follow these steps to run on your system
